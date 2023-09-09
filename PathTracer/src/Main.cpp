@@ -1,9 +1,9 @@
-#include <iostream>
+#include "Renderer.h"
+#include "Image.h"
 
 #include <imgui/imgui.h>
 #include <imgui/imgui_impl_glfw.h>
 #include <imgui/imgui_impl_opengl3.h>
-#include <imgui/imgui_impl_opengl3_loader.h>
 
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
@@ -15,26 +15,23 @@ int main(void)
 {
     spdlog::info("Hello, {}!", "World");
 
+    int screenWidth = 1000;
+    int screenHeight = 600;
     GLFWwindow* window;
 
-    /* Initialize the library */
     if (!glfwInit())
         return -1;
 
-    /* Create a windowed mode window and its OpenGL context */
-    window = glfwCreateWindow(640, 480, "Hello World", NULL, NULL);
+    window = glfwCreateWindow(screenWidth, screenHeight, "Hello World", NULL, NULL);
     if (!window)
     {
         glfwTerminate();
         return -1;
     }
-
-
-    /* Make the window's context current */
     glfwMakeContextCurrent(window);
 
 
-
+#pragma region ImGuiInit
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
@@ -45,10 +42,52 @@ int main(void)
     // Setup Platform/Renderer backends
     ImGui_ImplGlfw_InitForOpenGL(window, true);          // Second param install_callback=true will install GLFW callbacks and chain to existing ones.
     ImGui_ImplOpenGL3_Init("#version 460");
+#pragma endregion
 
-    float f = 0.3f;
-    int counter = 0;
-    glm::vec4 clear_color = glm::vec4(0.45f, 0.55f, 0.60f, 1.00f);
+#pragma region Scene
+    Scene scene;
+    {
+        Material defaultMaterial;
+        defaultMaterial.Albedo = glm::vec3(1.0f, 0.0f, 1.0f);
+        defaultMaterial.Roughness = 0.0f;
+        defaultMaterial.Metallic = 0.0f;
+        scene.Materials.push_back(defaultMaterial);
+    }
+    {
+        Material material;
+        material.Albedo = glm::vec3(1.0f, 1.0f, 0.0f);
+        material.Roughness = 1.0f;
+        material.Metallic = 0.0f;
+        scene.Materials.push_back(material);
+    }
+    {
+        Material material;
+        material.Albedo = glm::vec3(0.0f, 1.0f, 0.0f);
+        material.Roughness = 0.2f;
+        material.Metallic = 0.0f;
+        scene.Materials.push_back(material);
+    }
+    {
+        Sphere sphere;
+        sphere.Position = glm::vec3(0.0f);
+        sphere.Radius = 0.5f;
+        sphere.MaterialIndex = 1;
+        scene.Spheres.push_back(sphere);
+    }
+    {
+        Sphere sphere;
+        sphere.Position = glm::vec3(1.0f, 0.0f, -1.0f);
+        sphere.Radius = 1.0f;
+        sphere.MaterialIndex = 2;
+        scene.Spheres.push_back(sphere);
+    }
+#pragma endregion
+
+
+    Renderer renderer;
+    Camera camera(45.0f, screenWidth, screenHeight, 0.1f, 100.0f);
+    Image image(screenWidth, screenHeight);
+    Image accumulationImage(screenWidth, screenHeight);
 
     /* Loop until the user closes the window */
     while (!glfwWindowShouldClose(window))
@@ -60,35 +99,47 @@ int main(void)
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
+
+        glfwGetWindowSize(window, &screenWidth, &screenHeight);
         
+        image.OnResize(screenWidth, screenHeight);
+        accumulationImage.OnResize(screenWidth, screenHeight);
+        camera.OnResize(screenWidth, screenHeight);
+        renderer.OnResize(screenWidth, screenHeight);
+        renderer.Render(scene, camera, image, accumulationImage);
+
+        glDrawPixels(screenWidth, screenHeight, GL_RGB, GL_FLOAT, image.GetPixels().data());
 
         ImGui::Begin("Hello, world!");                          // Create a window called "Hello, world!" and append into it.
-
-        ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
-
-        ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
-
-        ImGui::ColorEdit3("clear color", glm::value_ptr(clear_color));
-
-        if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
-            counter++;
-        ImGui::SameLine();
-        ImGui::Text("counter = %d", counter);
-        ImGui::SameLine();
-        if (ImGui::Button("Reset"))
-            counter = 0;
-
         ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
+        ImGui::Checkbox("Accumulate", &renderer.GetSettings().Accumulate);
+        ImGui::Text("MATERIALS");
+        for (uint32_t i = 1; i < scene.Materials.size(); i++)
+        {
+            ImGui::PushID(i);
+            Material& material = scene.Materials[i];
+            ImGui::Text("Material %i", i);
+            ImGui::ColorEdit3("Albedo", glm::value_ptr(material.Albedo));
+            ImGui::DragFloat("Roughness", &material.Roughness, 0.01f, 0.0f, 1.0f);
+            ImGui::Separator();
+            ImGui::PopID();
+        }
+        ImGui::Text("SPHERES");
+        for (uint32_t i = 0; i < scene.Spheres.size(); i++)
+        {
+            ImGui::PushID(i);
+            Sphere& sphere = scene.Spheres[i];
+            ImGui::Text("Sphere %i", i);
+            ImGui::DragFloat3("Position", glm::value_ptr(sphere.Position), 0.01f);
+            ImGui::DragFloat("Radius", &sphere.Radius, 0.01f);
+            ImGui::Text("Uses material %i", i);
+            ImGui::Separator();
+            ImGui::PopID();
+        }
         ImGui::End();
-
-
         ImGui::Render();
-        int display_w, display_h;
-        glfwGetFramebufferSize(window, &display_w, &display_h);
-        glViewport(0, 0, display_w, display_h);
-        glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
-        glClear(GL_COLOR_BUFFER_BIT);
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+        glViewport(0, 0, screenWidth, screenHeight);
 
         glfwSwapBuffers(window);
     }
