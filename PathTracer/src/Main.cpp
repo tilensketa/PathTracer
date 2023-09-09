@@ -13,7 +13,7 @@
 
 int main(void)
 {
-    spdlog::info("Hello, {}!", "World");
+    spdlog::info("Path tracer");
 
     int screenWidth = 1000;
     int screenHeight = 600;
@@ -22,7 +22,7 @@ int main(void)
     if (!glfwInit())
         return -1;
 
-    window = glfwCreateWindow(screenWidth, screenHeight, "Hello World", NULL, NULL);
+    window = glfwCreateWindow(screenWidth, screenHeight, "PATH TRACER", NULL, NULL);
     if (!window)
     {
         glfwTerminate();
@@ -110,7 +110,7 @@ int main(void)
 
         glDrawPixels(screenWidth, screenHeight, GL_RGB, GL_FLOAT, image.GetPixels().data());
 
-        ImGui::Begin("Hello, world!");                          // Create a window called "Hello, world!" and append into it.
+        ImGui::Begin("PATH TRACER");
         ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
         ImGui::Checkbox("Accumulate", &renderer.GetSettings().Accumulate);
         ImGui::Text("MATERIALS");

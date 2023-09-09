@@ -49,4 +49,9 @@ private:
 
 	uint32_t m_Width = 1000;
 	uint32_t m_Height = 600;
+
+	std::vector<uint32_t> m_ImageHorizontalIter;
+	std::vector<uint32_t> m_ImageVerticalIter;
+
+	bool m_First = true;
 };

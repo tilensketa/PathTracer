@@ -2,12 +2,23 @@
 
 #include "Utils.h"
 
+#include <algorithm>
+#include <execution>
+
 void Renderer::OnResize(uint32_t width, uint32_t height) {
-	if (m_Width == width && m_Height == height)
+	if (m_Width == width && m_Height == height && !m_First)
 		return;
 
 	m_Width = width;
 	m_Height = height;
+
+	m_ImageHorizontalIter.resize(width);
+	m_ImageVerticalIter.resize(height);
+	for (uint32_t i = 0; i < width; i++)
+		m_ImageHorizontalIter[i] = i;
+	for (uint32_t i = 0; i < height; i++)
+		m_ImageVerticalIter[i] = i;
+	m_First = false;
 }
 
 void Renderer::Render(const Scene& scene, const Camera& camera, Image& image, Image& accumulationImage) {
@@ -23,6 +34,24 @@ void Renderer::Render(const Scene& scene, const Camera& camera, Image& image, Im
 	if (m_FrameIndex == 1)
 		m_AccumulationImage->Clear();
 
+#define MT 1 //Multithreading
+#if MT
+	std::for_each(std::execution::par, m_ImageVerticalIter.begin(), m_ImageVerticalIter.end(),
+		[this](uint32_t y)
+		{
+			std::for_each(std::execution::par, m_ImageHorizontalIter.begin(), m_ImageHorizontalIter.end(),
+			[this, y](uint32_t x) {
+					uint32_t i = y * m_Width + x;
+					glm::vec3 color = PerPixel(i);
+					glm::vec3 prevAccumulatedColor = m_AccumulationImage->GetPixel(i);
+					glm::vec3 newAccumulatedColor = prevAccumulatedColor + color;
+					m_AccumulationImage->SetPixel(i, newAccumulatedColor);
+					newAccumulatedColor /= (float)m_FrameIndex;
+
+					m_Image->SetPixel(i, newAccumulatedColor);
+			});
+		});
+#else
 	for (uint32_t y = 0; y < m_Height; y++)
 	{
 		for (uint32_t x = 0; x < m_Width; x++)
@@ -31,12 +60,15 @@ void Renderer::Render(const Scene& scene, const Camera& camera, Image& image, Im
 			glm::vec3 color = PerPixel(i);
 			glm::vec3 prevAccumulatedColor = m_AccumulationImage->GetPixel(i);
 			glm::vec3 newAccumulatedColor = prevAccumulatedColor + color;
-			m_AccumulationImage->SetPixel(x, y, newAccumulatedColor);
+			m_AccumulationImage->SetPixel(i, newAccumulatedColor);
 			newAccumulatedColor /= (float)m_FrameIndex;
 
-			m_Image->SetPixel(x, y, newAccumulatedColor);
+			m_Image->SetPixel(i, newAccumulatedColor);
 		}
 	}
+
+#endif
+
 	if (m_Settings.Accumulate)
 		m_FrameIndex++;
 	else
@@ -57,7 +89,7 @@ glm::vec3 Renderer::PerPixel(uint32_t i) {
 	{
 		HitPayload payload = TraceRay(ray);
 		if (payload.HitDistance < 0.0f) {
-			glm::vec3 skyColor = glm::vec3(0.2f, 0.2f, 0.7f);
+			glm::vec3 skyColor = glm::vec3(0.0f, 0.3f, 1.0f);
 			color += skyColor * multiplier;
 			break;
 		}

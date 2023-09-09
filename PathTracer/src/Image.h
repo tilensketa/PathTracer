@@ -25,8 +25,7 @@ public:
 		m_Pixels.resize(m_Width * m_Height);
 	}
 
-	void SetPixel(const uint32_t& x, const uint32_t& y, const glm::vec3& color) {
-		uint32_t i = y * m_Width + x;
+	void SetPixel(const uint32_t& i, const glm::vec3& color) {
 		m_Pixels[i] = color;
 	}
 
