@@ -81,8 +81,8 @@ glm::vec3 Renderer::PerPixel(uint32_t i) {
 	ray.Origin = m_ActiveCamera->GetPosition();
 	ray.Direction = m_ActiveCamera->GetRayDirections()[i];
 
-	glm::vec3 color(0.0f);
-	float multiplier = 1.0f;
+	glm::vec3 light(0.0f);
+	glm::vec3 contribution(1.0f);
 
 	int bounces = 100;
 	for (uint32_t k = 0; k < bounces; k++)
@@ -90,23 +90,21 @@ glm::vec3 Renderer::PerPixel(uint32_t i) {
 		HitPayload payload = TraceRay(ray);
 		if (payload.HitDistance < 0.0f) {
 			glm::vec3 skyColor = glm::vec3(0.0f, 0.3f, 1.0f);
-			color += skyColor * multiplier;
+			//light += skyColor * contribution;
 			break;
 		}
 
-		glm::vec3 lightDir = glm::normalize(glm::vec3(-1.0f, -1.0f, -1.0f));
-		float lightIntensity = glm::max(glm::dot(payload.WorldNormal, -lightDir), 0.0f);
-
 		const Sphere& sphere = m_ActiveScene->Spheres[payload.ObjectIndex];
 		const Material& material = m_ActiveScene->Materials[sphere.MaterialIndex];
-		glm::vec3 sphereColor = material.Albedo;
-		sphereColor *= lightIntensity;
-		color += sphereColor * multiplier;
-		multiplier *= 0.5f;
+
+		contribution *= material.Albedo;
+		light += material.GetEmmision();
+
 		ray.Origin = payload.WorldPosition + payload.WorldNormal * 0.0001f;
-		ray.Direction = glm::reflect(ray.Direction, payload.WorldNormal + material.Roughness * Random::vec3(-0.5f, 0.5f));
+		//ray.Direction = glm::reflect(ray.Direction, payload.WorldNormal + material.Roughness * Random::Vec3(-0.5f, 0.5f));
+		ray.Direction = glm::normalize(payload.WorldNormal + Random::InUnitSphere());
 	}
-	return color;
+	return light;
 }
 
 

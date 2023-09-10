@@ -8,7 +8,7 @@
 class Renderer {
 public:
 	struct Settings {
-		bool Accumulate = false;
+		bool Accumulate = true;
 	};
 public:
 	Renderer() = default;

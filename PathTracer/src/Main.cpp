@@ -15,8 +15,8 @@ int main(void)
 {
     spdlog::info("Path tracer");
 
-    int screenWidth = 1000;
-    int screenHeight = 600;
+    int screenWidth = 1500;
+    int screenHeight = 900;
     GLFWwindow* window;
 
     if (!glfwInit())
@@ -68,17 +68,33 @@ int main(void)
         scene.Materials.push_back(material);
     }
     {
+        Material material;
+        material.Albedo = glm::vec3(0.8f, 0.5f, 0.2f);
+        material.Roughness = 0.1f;
+        material.EmissionColor = material.Albedo;
+        material.EmissionPower = 2.0f;
+        scene.Materials.push_back(material);
+    }
+
+    {
         Sphere sphere;
-        sphere.Position = glm::vec3(0.0f);
-        sphere.Radius = 0.5f;
+        sphere.Position = glm::vec3(0.5f, -0.3f, 0.0f);
+        sphere.Radius = 0.25f;
         sphere.MaterialIndex = 1;
         scene.Spheres.push_back(sphere);
     }
     {
         Sphere sphere;
-        sphere.Position = glm::vec3(1.0f, 0.0f, -1.0f);
-        sphere.Radius = 1.0f;
+        sphere.Position = glm::vec3(1.0f, -10.5f, -1.0f);
+        sphere.Radius = 10.0f;
         sphere.MaterialIndex = 2;
+        scene.Spheres.push_back(sphere);
+    }
+    {
+        Sphere sphere;
+        sphere.Position = glm::vec3(5.5f, 1.5f, -5.0f);
+        sphere.Radius = 3.5f;
+        sphere.MaterialIndex = 3;
         scene.Spheres.push_back(sphere);
     }
 #pragma endregion
@@ -121,6 +137,8 @@ int main(void)
             ImGui::Text("Material %i", i);
             ImGui::ColorEdit3("Albedo", glm::value_ptr(material.Albedo));
             ImGui::DragFloat("Roughness", &material.Roughness, 0.01f, 0.0f, 1.0f);
+            ImGui::ColorEdit3("Emission Color", glm::value_ptr(material.EmissionColor));
+            ImGui::DragFloat("Emission Power", &material.EmissionPower, 0.05f, 0.0f, FLT_MAX);
             ImGui::Separator();
             ImGui::PopID();
         }
