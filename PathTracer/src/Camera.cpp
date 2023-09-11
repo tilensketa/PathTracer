@@ -1,6 +1,8 @@
 #include "Camera.h"
 
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/quaternion.hpp>
+#include <glm/gtx/quaternion.hpp>
 
 Camera::Camera(float FOV, uint32_t width, uint32_t height, float near, float far)
 	: m_FOV(FOV), m_ViewportWidth(width), m_ViewportHeight(height), m_NearClip(near), m_FarClip(far) {
@@ -19,6 +21,83 @@ void Camera::OnResize(uint32_t width, uint32_t height) {
 	m_ViewportHeight = height;
 	RecalculateProjection();
 	RecalculateRayDirections();
+}
+
+bool Camera::OnUpdate(GLFWwindow* window, float ts) {
+	double x;
+	double y;
+	glfwGetCursorPos(window, &x, &y);
+	glm::vec2 mousePos(x, y);
+	glm::vec2 delta = (mousePos - m_LastMousePosition) * 0.002f;
+	m_LastMousePosition = mousePos;
+
+	if (!glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT))
+	{
+		glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+		return false;
+	}
+
+	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+
+	bool moved = false;
+
+	//constexpr glm::vec3 upDirection(0.0f, 1.0f, 0.0f);
+	glm::vec3 rightDirection = glm::cross(m_ForwardDirection, m_UpDirection);
+
+	float speed = GetMoveSpeed();
+
+	// Movement
+	if (glfwGetKey(window, GLFW_KEY_W))
+	{
+		m_Position += m_ForwardDirection * speed * ts;
+		moved = true;
+	}
+	else if (glfwGetKey(window, GLFW_KEY_S))
+	{
+		m_Position -= m_ForwardDirection * speed * ts;
+		moved = true;
+	}
+	if (glfwGetKey(window, GLFW_KEY_A))
+	{
+		m_Position -= rightDirection * speed * ts;
+		moved = true;
+	}
+	else if (glfwGetKey(window, GLFW_KEY_D))
+	{
+		m_Position += rightDirection * speed * ts;
+		moved = true;
+	}
+	if (glfwGetKey(window, GLFW_KEY_SPACE))
+	{
+		m_Position += m_UpDirection * speed * ts;
+		moved = true;
+	}
+	else if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL))
+	{
+		m_Position -= m_UpDirection * speed * ts;
+		moved = true;
+	}
+
+	// Rotation
+	if (delta.x != 0.0f || delta.y != 0.0f)
+	{
+		float pitchDelta = delta.y * GetRotationSpeed();
+		float yawDelta = delta.x * GetRotationSpeed();
+
+		glm::quat q = glm::normalize(glm::cross(glm::angleAxis(-pitchDelta, rightDirection),
+			glm::angleAxis(-yawDelta, glm::vec3(0.f, 1.0f, 0.0f))));
+		m_ForwardDirection = glm::rotate(q, m_ForwardDirection);
+
+		moved = true;
+	}
+
+	if (moved)
+	{
+		RecalculateView();
+		RecalculateRayDirections();
+	}
+
+	return moved;
 }
 
 void Camera::RecalculateProjection() {

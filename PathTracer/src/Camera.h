@@ -4,11 +4,14 @@
 
 #include <vector>
 
+#include <GLFW/glfw3.h>
+
 class Camera {
 public:
 	Camera(float FOV, uint32_t width, uint32_t height, float near, float far);
 
 	void OnResize(uint32_t width, uint32_t height);
+	bool OnUpdate(GLFWwindow* window, float ts);
 
 	const glm::mat4& GetProjection() const { return m_Projection; }
 	const glm::mat4& GetView() const { return m_View; }
@@ -28,6 +31,9 @@ private:
 	void RecalculateView();
 	void RecalculateRayDirections();
 
+	float GetRotationSpeed() { return m_RotationSpeed; }
+	float GetMoveSpeed() { return m_MoveSpeed; }
+
 private:
 	glm::vec3 m_Position = glm::vec3(0.0f);
 	glm::vec3 m_ForwardDirection = glm::vec3(0.0f);
@@ -44,9 +50,11 @@ private:
 
 	std::vector<glm::vec3> m_RayDirections;
 
-	float m_MoveSpeed;
-	float m_RotationSpeed;
+	float m_MoveSpeed =2.0f;
+	float m_RotationSpeed = 2.0f;
 
 	uint32_t m_ViewportWidth;
 	uint32_t m_ViewportHeight;
+
+	glm::vec2 m_LastMousePosition{ 0.0f, 0.0f };
 };

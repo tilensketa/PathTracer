@@ -15,8 +15,8 @@ int main(void)
 {
     spdlog::info("Path tracer");
 
-    int screenWidth = 1500;
-    int screenHeight = 900;
+    int screenWidth = 1000;
+    int screenHeight = 600;
     GLFWwindow* window;
 
     if (!glfwInit())
@@ -72,10 +72,10 @@ int main(void)
         material.Albedo = glm::vec3(0.8f, 0.5f, 0.2f);
         material.Roughness = 0.1f;
         material.EmissionColor = material.Albedo;
-        material.EmissionPower = 2.0f;
+        material.EmissionPower = 10.0f;
         scene.Materials.push_back(material);
     }
-
+    /*
     {
         Sphere sphere;
         sphere.Position = glm::vec3(0.5f, -0.3f, 0.0f);
@@ -97,8 +97,23 @@ int main(void)
         sphere.MaterialIndex = 3;
         scene.Spheres.push_back(sphere);
     }
+    */
+    {
+        Mesh monkey("Models/monkey.obj", glm::vec3(0.0f, 0.0f, -1.0f));
+        monkey.SetMaterialIndex(2);
+        scene.Meshes.push_back(monkey);
+    }
+    {
+        Mesh plane("Models/plane.obj", glm::vec3(0.0f, -1.0f, 0.0f));
+        plane.SetMaterialIndex(1);
+        scene.Meshes.push_back(plane);
+    }
+    {
+        Mesh light("Models/cube1.obj", glm::vec3(2.0f, 2.0f, 3.0f));
+        light.SetMaterialIndex(3);
+        scene.Meshes.push_back(light);
+    }
 #pragma endregion
-
 
     Renderer renderer;
     Camera camera(45.0f, screenWidth, screenHeight, 0.1f, 100.0f);
@@ -118,6 +133,8 @@ int main(void)
 
         glfwGetWindowSize(window, &screenWidth, &screenHeight);
         
+        if (camera.OnUpdate(window, io.Framerate / 100.0f))
+            renderer.ResetFrameIndex();
         image.OnResize(screenWidth, screenHeight);
         accumulationImage.OnResize(screenWidth, screenHeight);
         camera.OnResize(screenWidth, screenHeight);
@@ -142,18 +159,20 @@ int main(void)
             ImGui::Separator();
             ImGui::PopID();
         }
-        ImGui::Text("SPHERES");
-        for (uint32_t i = 0; i < scene.Spheres.size(); i++)
+        /*
+        ImGui::Text("MESHES");
+        for (uint32_t i = 0; i < scene.Meshes.size(); i++)
         {
             ImGui::PushID(i);
-            Sphere& sphere = scene.Spheres[i];
-            ImGui::Text("Sphere %i", i);
-            ImGui::DragFloat3("Position", glm::value_ptr(sphere.Position), 0.01f);
-            ImGui::DragFloat("Radius", &sphere.Radius, 0.01f);
-            ImGui::Text("Uses material %i", i);
+            Mesh& mesh = scene.Meshes[i];
+            ImGui::Text("Mesh %i", i);
+            ImGui::DragFloat3("Position", glm::value_ptr(mesh.Position()), 0.01f);
+            ImGui::DragFloat("Scale", &mesh.Scale());
+            ImGui::Text("Uses material %i", mesh.GetMaterialIndex());
             ImGui::Separator();
             ImGui::PopID();
         }
+        */
         ImGui::End();
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
