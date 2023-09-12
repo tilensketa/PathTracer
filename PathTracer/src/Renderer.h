@@ -8,7 +8,7 @@
 class Renderer {
 public:
 	struct Settings {
-		bool Accumulate = false;
+		bool Accumulate = true;
 	};
 public:
 	Renderer() = default;
@@ -31,9 +31,10 @@ private:
 	};
 
 	glm::vec3 PerPixel(uint32_t i);
-
 	HitPayload TraceRay(const Ray& ray);
+	std::vector<uint32_t> BoundingIntersection(const Ray& ray);
 	bool RayIntersectsTriangle(const Ray& ray, const Triangle& triangle, float& outT);
+	bool RayIntersectsTriangle(const Ray& ray, const BoundingTriangle& triangle, float& outT);
 	HitPayload ClosestHit(const Ray& ray, float hitDistance, uint32_t objectIndex, uint32_t triangleIndex);
 	HitPayload Miss(const Ray& ray);
 

@@ -75,31 +75,14 @@ int main(void)
         material.EmissionPower = 10.0f;
         scene.Materials.push_back(material);
     }
-    /*
-    {
-        Sphere sphere;
-        sphere.Position = glm::vec3(0.5f, -0.3f, 0.0f);
-        sphere.Radius = 0.25f;
-        sphere.MaterialIndex = 1;
-        scene.Spheres.push_back(sphere);
-    }
-    {
-        Sphere sphere;
-        sphere.Position = glm::vec3(1.0f, -10.5f, -1.0f);
-        sphere.Radius = 10.0f;
-        sphere.MaterialIndex = 2;
-        scene.Spheres.push_back(sphere);
-    }
-    {
-        Sphere sphere;
-        sphere.Position = glm::vec3(5.5f, 1.5f, -5.0f);
-        sphere.Radius = 3.5f;
-        sphere.MaterialIndex = 3;
-        scene.Spheres.push_back(sphere);
-    }
-    */
+
     {
         Mesh monkey("Models/monkey.obj", glm::vec3(0.0f, 0.0f, -1.0f));
+        monkey.SetMaterialIndex(2);
+        scene.Meshes.push_back(monkey);
+    }
+    {
+        Mesh monkey("Models/monkey.obj", glm::vec3(2.0f, 0.0f, -2.0f));
         monkey.SetMaterialIndex(2);
         scene.Meshes.push_back(monkey);
     }
@@ -159,20 +142,7 @@ int main(void)
             ImGui::Separator();
             ImGui::PopID();
         }
-        /*
-        ImGui::Text("MESHES");
-        for (uint32_t i = 0; i < scene.Meshes.size(); i++)
-        {
-            ImGui::PushID(i);
-            Mesh& mesh = scene.Meshes[i];
-            ImGui::Text("Mesh %i", i);
-            ImGui::DragFloat3("Position", glm::value_ptr(mesh.Position()), 0.01f);
-            ImGui::DragFloat("Scale", &mesh.Scale());
-            ImGui::Text("Uses material %i", mesh.GetMaterialIndex());
-            ImGui::Separator();
-            ImGui::PopID();
-        }
-        */
+
         ImGui::End();
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());

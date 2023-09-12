@@ -32,8 +32,9 @@ void Renderer::Render(const Scene& scene, const Camera& camera, Image& image, Im
 	m_Width = image.GetWidth();
 	m_Height = image.GetHeight();
 
-	if (m_FrameIndex == 1)
+	if (m_FrameIndex == 1) {
 		m_AccumulationImage->Clear();
+	}
 
 #define MT 1 //Multithreading
 #if MT
@@ -85,7 +86,7 @@ glm::vec3 Renderer::PerPixel(uint32_t i) {
 	glm::vec3 light(0.0f);
 	glm::vec3 contribution(1.0f);
 
-	int bounces = 2;
+	int bounces = 100;
 	for (uint32_t k = 0; k < bounces; k++)
 	{
 		HitPayload payload = TraceRay(ray);
@@ -94,21 +95,12 @@ glm::vec3 Renderer::PerPixel(uint32_t i) {
 			//light += skyColor * contribution;
 			break;
 		}
-		/*
-		const Sphere& sphere = m_ActiveScene->Spheres[payload.ObjectIndex];
-		const Material& material = m_ActiveScene->Materials[sphere.MaterialIndex];
 
-		contribution *= material.Albedo;
-		light += material.GetEmmision();
-
-		ray.Origin = payload.WorldPosition + payload.WorldNormal * 0.0001f;
-		//ray.Direction = glm::reflect(ray.Direction, payload.WorldNormal + material.Roughness * Random::Vec3(-0.5f, 0.5f));
-		ray.Direction = glm::normalize(payload.WorldNormal + Random::InUnitSphere());
-		*/
 		const Mesh& mesh = m_ActiveScene->Meshes[payload.ObjectIndex];
 		const Material& material = m_ActiveScene->Materials[mesh.GetMaterialIndex()];
 		contribution *= material.Albedo;
 		light += material.GetEmmision();
+		//light += material.EmissionPower * material.Albedo;
 		ray.Origin = payload.WorldPosition + payload.WorldNormal * 0.0001f;
 		ray.Direction = glm::normalize(payload.WorldNormal + Random::InUnitSphere());
 	}
@@ -117,61 +109,63 @@ glm::vec3 Renderer::PerPixel(uint32_t i) {
 
 
 Renderer::HitPayload Renderer::TraceRay(const Ray& ray) {
-	/*
-	int closestSphereIndex = -1;
+	int closestMeshIndex = -1;
+	int triangleIndex = -1;
 	float hitDistance = std::numeric_limits<float>::max();
 
-	for (uint32_t i = 0; i < m_ActiveScene->Spheres.size(); i++)
+	std::vector<uint32_t> res = BoundingIntersection(ray);
+	if (res.empty())
+		return Miss(ray);
+	for (const uint32_t index : res)
 	{
-		const Sphere& sphere = m_ActiveScene->Spheres[i];
-		glm::vec3 origin = ray.Origin - sphere.Position;
-
-		float a = glm::dot(ray.Direction, ray.Direction);
-		float b = 2.0f * glm::dot(origin, ray.Direction);
-		float c = glm::dot(origin, origin) - sphere.Radius * sphere.Radius;
-
-		float discriminant = b * b - 4.0f * a * c;
-		if (discriminant < 0.0f)
-			continue;
-
-		float t0 = (-b - glm::sqrt(discriminant)) / (2.0f * a);
-		//float t1 = (-b + glm::sqrt(discriminant)) / (2.0f * a);
-		if (t0 > 0.0f && t0 < hitDistance) {
-			hitDistance = t0;
-			closestSphereIndex = i;
+		const Mesh& mesh = m_ActiveScene->Meshes[index];
+		for (uint32_t i = 0; i < mesh.GetTriangles().size(); i++)
+		{
+			const Triangle& triangle = mesh.GetTriangles()[i];
+			float t;
+			if (RayIntersectsTriangle(ray, triangle, t)) {
+				if (t < hitDistance) {
+					hitDistance = t;
+					triangleIndex = i;
+					closestMeshIndex = index;
+				}
+			}
 		}
 	}
 
-
-	if (closestSphereIndex < 0)
+	if (closestMeshIndex < 0)
 		return Miss(ray);
 
-	return ClosestHit(ray, hitDistance, closestSphereIndex);
-	*/
+	return ClosestHit(ray, hitDistance, closestMeshIndex, triangleIndex);
+}
 
-	int closestMeshIndex = -1;
-	int triangleIndex = -1;
+std::vector<uint32_t> Renderer::BoundingIntersection(const Ray& ray) {
+
+	std::vector<uint32_t> result;
+
+	uint32_t meshIntersectIndex = -1;
 	float hitDistance = std::numeric_limits<float>::max();
 
 	for (uint32_t i = 0; i < m_ActiveScene->Meshes.size(); i++)
 	{
 		const Mesh& mesh = m_ActiveScene->Meshes[i];
-		for (uint32_t j = 0; j < mesh.GetTriangles().size(); j++)
+
+		for (uint32_t j = 0; j < mesh.GetBoundingBox().GetTriangles().size(); j++)
 		{
-			const Triangle& triangle = mesh.GetTriangles()[j];
+			const BoundingTriangle& boundingTriangle = mesh.GetBoundingBox().GetTriangles()[j];
 			float t;
-			if (RayIntersectsTriangle(ray, triangle, t)) {
+			if (RayIntersectsTriangle(ray, boundingTriangle, t)) {
 				if (t < hitDistance) {
-					hitDistance = t;
-					closestMeshIndex = i;
-					triangleIndex = j;
+					if (glm::dot(ray.Direction, boundingTriangle.N) < 0.0f)
+					{
+						result.push_back(i);
+						break;
+					}
 				}
 			}
 		}
 	}
-	if (closestMeshIndex < 0)
-		return Miss(ray);
-	return ClosestHit(ray, hitDistance, closestMeshIndex, triangleIndex);
+	return result;
 }
 
 bool Renderer::RayIntersectsTriangle(const Ray& ray, const Triangle& triangle, float& outT) {
@@ -208,21 +202,45 @@ bool Renderer::RayIntersectsTriangle(const Ray& ray, const Triangle& triangle, f
 	return false;
 }
 
+bool Renderer::RayIntersectsTriangle(const Ray& ray, const BoundingTriangle& triangle, float& outT) {
+	const float EPSILON = 0.000001f;
+	glm::vec3 edge1, edge2, h, s, q;
+	float a, f, u, v;
+
+	edge1 = triangle.B - triangle.A;
+	edge2 = triangle.C - triangle.A;
+	h = glm::cross(ray.Direction, edge2);
+	a = glm::dot(edge1, h);
+
+	if (a > -EPSILON && a < EPSILON)
+		return false;
+
+	f = 1.0f / a;
+	s = ray.Origin - triangle.A;
+	u = f * glm::dot(s, h);
+
+	if (u < 0.0f || u > 1.0f)
+		return false;
+
+	q = glm::cross(s, edge1);
+	v = f * glm::dot(ray.Direction, q);
+
+	if (v < 0.0f || u + v > 1.0f)
+		return false;
+
+	outT = f * glm::dot(edge2, q);
+
+	if (outT > EPSILON)
+		return true;
+
+	return false;
+}
+
 Renderer::HitPayload Renderer::ClosestHit(const Ray& ray, float hitDistance, uint32_t objectIndex, uint32_t triangleIndex) {
 	HitPayload payload;
 	payload.HitDistance = hitDistance;
 	payload.ObjectIndex = objectIndex;
-	/*
-	const Sphere& sphere = m_ActiveScene->Spheres[objectIndex];
 
-	glm::vec3 origin = ray.Origin - sphere.Position;
-	payload.WorldPosition = origin + ray.Direction * hitDistance;
-	payload.WorldNormal = glm::normalize(payload.WorldPosition);
-
-	payload.WorldPosition += sphere.Position;
-
-	return payload;
-	*/
 	const Mesh& mesh = m_ActiveScene->Meshes[objectIndex];
 	payload.WorldPosition = ray.Direction * hitDistance + ray.Origin;
 	payload.WorldNormal = mesh.GetTriangles()[triangleIndex].A.Normal;
