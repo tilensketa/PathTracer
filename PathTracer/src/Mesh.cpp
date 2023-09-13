@@ -7,7 +7,7 @@
 Mesh::Mesh(const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices, uint32_t materialIndex)
 	: m_Vertices(vertices), m_Indices(indices), m_MaterialIndex(materialIndex) {
 	m_Triangles = CalculateTriangles(m_Vertices, m_Indices);
-	m_BoundingBox = CreateBoundingBox();
+	m_AABB = CreateAABB();
 }
 
 Mesh::Mesh(std::string const& path, const glm::vec3& position) {
@@ -38,7 +38,7 @@ Mesh::Mesh(std::string const& path, const glm::vec3& position) {
 			}
 
 			m_Triangles = CalculateTriangles(m_Vertices, m_Indices);
-			m_BoundingBox = CreateBoundingBox();
+			m_AABB = CreateAABB();
 		}
 	}
 	else {
@@ -63,7 +63,7 @@ std::vector<Triangle> Mesh::CalculateTriangles(const std::vector<Vertex>& vertic
 	return result;
 }
 
-BoundingBox Mesh::CreateBoundingBox() {
+AABB Mesh::CreateAABB() {
 	float max = std::numeric_limits<float>::max();
 	float min = std::numeric_limits<float>::min();
 	glm::vec3 minVert = glm::vec3(max, max, max);
@@ -79,5 +79,5 @@ BoundingBox Mesh::CreateBoundingBox() {
 		maxVert.y = std::max(maxVert.y, vert.Position.y);
 		maxVert.z = std::max(maxVert.z, vert.Position.z);
 	}
-	return BoundingBox(maxVert, minVert);
+	return AABB(maxVert, minVert);
 }

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Vertex.h"
-#include "BoundingBox.h"
+#include "AABB.h"
 
 #include <glm/glm.hpp>
 
@@ -28,13 +28,13 @@ public:
 	const std::vector<uint32_t>& GetIndices() const { return m_Indices; }
 	const std::vector<Triangle>& GetTriangles() const { return m_Triangles; }
 
-	const BoundingBox& GetBoundingBox() const { return m_BoundingBox; }
+	const AABB& GetAABB() const { return m_AABB; }
 
 	glm::vec3& Position() { return m_Position; }
 	float& Scale() { return m_Scale; }
 private:
 	std::vector<Triangle> CalculateTriangles(const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices);
-	BoundingBox CreateBoundingBox();
+	AABB CreateAABB();
 private:
 	std::vector<Vertex> m_Vertices;
 	std::vector<uint32_t> m_Indices;
@@ -44,5 +44,5 @@ private:
 	float m_Scale = 1.0f;
 	uint32_t m_MaterialIndex = 0;
 
-	BoundingBox m_BoundingBox;
+	AABB m_AABB;
 };

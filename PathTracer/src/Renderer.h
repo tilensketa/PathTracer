@@ -34,7 +34,7 @@ private:
 	HitPayload TraceRay(const Ray& ray);
 	std::vector<uint32_t> BoundingIntersection(const Ray& ray);
 	bool RayIntersectsTriangle(const Ray& ray, const Triangle& triangle, float& outT);
-	bool RayIntersectsTriangle(const Ray& ray, const BoundingTriangle& triangle, float& outT);
+	bool RayIntersectsAABB(const Ray& ray, const AABB& box, float& outTNear, float& outTFar);
 	HitPayload ClosestHit(const Ray& ray, float hitDistance, uint32_t objectIndex, uint32_t triangleIndex);
 	HitPayload Miss(const Ray& ray);
 

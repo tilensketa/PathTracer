@@ -82,11 +82,6 @@ int main(void)
         scene.Meshes.push_back(monkey);
     }
     {
-        Mesh monkey("Models/monkey.obj", glm::vec3(2.0f, 0.0f, -2.0f));
-        monkey.SetMaterialIndex(2);
-        scene.Meshes.push_back(monkey);
-    }
-    {
         Mesh plane("Models/plane.obj", glm::vec3(0.0f, -1.0f, 0.0f));
         plane.SetMaterialIndex(1);
         scene.Meshes.push_back(plane);
@@ -129,7 +124,7 @@ int main(void)
         ImGui::Begin("PATH TRACER");
         ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
         ImGui::Checkbox("Accumulate", &renderer.GetSettings().Accumulate);
-        ImGui::Text("MATERIALS");
+        /*ImGui::Text("MATERIALS");
         for (uint32_t i = 1; i < scene.Materials.size(); i++)
         {
             ImGui::PushID(i);
@@ -142,6 +137,16 @@ int main(void)
             ImGui::Separator();
             ImGui::PopID();
         }
+        for (uint32_t i = 0; i < scene.Meshes.size(); i++)
+        {
+            ImGui::PushID(i);
+            const Mesh& mesh = scene.Meshes[i];
+            ImGui::Text("Mesh %i", i);
+            ImGui::SameLine();
+            ImGui::Text("Triangles: %i", mesh.GetTriangles().size());
+            ImGui::Separator();
+            ImGui::PopID();
+        }*/
 
         ImGui::End();
         ImGui::Render();

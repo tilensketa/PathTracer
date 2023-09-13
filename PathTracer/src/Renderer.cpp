@@ -6,6 +6,8 @@
 #include <algorithm>
 #include <execution>
 
+#include <glm/gtx/component_wise.hpp>
+
 void Renderer::OnResize(uint32_t width, uint32_t height) {
 	if (m_Width == width && m_Height == height && !m_First)
 		return;
@@ -86,7 +88,7 @@ glm::vec3 Renderer::PerPixel(uint32_t i) {
 	glm::vec3 light(0.0f);
 	glm::vec3 contribution(1.0f);
 
-	int bounces = 100;
+	int bounces = 20;
 	for (uint32_t k = 0; k < bounces; k++)
 	{
 		HitPayload payload = TraceRay(ray);
@@ -113,10 +115,10 @@ Renderer::HitPayload Renderer::TraceRay(const Ray& ray) {
 	int triangleIndex = -1;
 	float hitDistance = std::numeric_limits<float>::max();
 
-	std::vector<uint32_t> res = BoundingIntersection(ray);
-	if (res.empty())
+	std::vector<uint32_t> intersectedMeshIndexes = BoundingIntersection(ray);
+	if (intersectedMeshIndexes.empty())
 		return Miss(ray);
-	for (const uint32_t index : res)
+	for (const uint32_t index : intersectedMeshIndexes)
 	{
 		const Mesh& mesh = m_ActiveScene->Meshes[index];
 		for (uint32_t i = 0; i < mesh.GetTriangles().size(); i++)
@@ -142,27 +144,12 @@ Renderer::HitPayload Renderer::TraceRay(const Ray& ray) {
 std::vector<uint32_t> Renderer::BoundingIntersection(const Ray& ray) {
 
 	std::vector<uint32_t> result;
-
-	uint32_t meshIntersectIndex = -1;
-	float hitDistance = std::numeric_limits<float>::max();
-
 	for (uint32_t i = 0; i < m_ActiveScene->Meshes.size(); i++)
 	{
 		const Mesh& mesh = m_ActiveScene->Meshes[i];
-
-		for (uint32_t j = 0; j < mesh.GetBoundingBox().GetTriangles().size(); j++)
-		{
-			const BoundingTriangle& boundingTriangle = mesh.GetBoundingBox().GetTriangles()[j];
-			float t;
-			if (RayIntersectsTriangle(ray, boundingTriangle, t)) {
-				if (t < hitDistance) {
-					if (glm::dot(ray.Direction, boundingTriangle.N) < 0.0f)
-					{
-						result.push_back(i);
-						break;
-					}
-				}
-			}
+		float tNear, tFar;
+		if (RayIntersectsAABB(ray, mesh.GetAABB(), tNear, tFar)) {
+			result.push_back(i);
 		}
 	}
 	return result;
@@ -202,38 +189,15 @@ bool Renderer::RayIntersectsTriangle(const Ray& ray, const Triangle& triangle, f
 	return false;
 }
 
-bool Renderer::RayIntersectsTriangle(const Ray& ray, const BoundingTriangle& triangle, float& outT) {
-	const float EPSILON = 0.000001f;
-	glm::vec3 edge1, edge2, h, s, q;
-	float a, f, u, v;
+bool Renderer::RayIntersectsAABB(const Ray& ray, const AABB& box, float& outTNear, float& outTFar) {
+	glm::vec3 invDir = 1.0f / ray.Direction;
+	glm::vec3 t1 = (box.Min - ray.Origin) * invDir;
+	glm::vec3 t2 = (box.Max - ray.Origin) * invDir;
 
-	edge1 = triangle.B - triangle.A;
-	edge2 = triangle.C - triangle.A;
-	h = glm::cross(ray.Direction, edge2);
-	a = glm::dot(edge1, h);
+	outTNear = glm::compMax(glm::min(t1, t2));
+	outTFar = glm::compMin(glm::max(t1, t2));
 
-	if (a > -EPSILON && a < EPSILON)
-		return false;
-
-	f = 1.0f / a;
-	s = ray.Origin - triangle.A;
-	u = f * glm::dot(s, h);
-
-	if (u < 0.0f || u > 1.0f)
-		return false;
-
-	q = glm::cross(s, edge1);
-	v = f * glm::dot(ray.Direction, q);
-
-	if (v < 0.0f || u + v > 1.0f)
-		return false;
-
-	outT = f * glm::dot(edge2, q);
-
-	if (outT > EPSILON)
-		return true;
-
-	return false;
+	return outTNear <= outTFar && outTFar >= 0;
 }
 
 Renderer::HitPayload Renderer::ClosestHit(const Ray& ray, float hitDistance, uint32_t objectIndex, uint32_t triangleIndex) {
