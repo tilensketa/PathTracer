@@ -1,3 +1,7 @@
+#define STB_IMAGE_IMPLEMENTATION
+
+#include "Model.h"
+
 #include "Renderer.h"
 #include "Image.h"
 
@@ -8,7 +12,6 @@
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
-
 #include <spdlog/spdlog.h>
 
 int main(void)
@@ -46,51 +49,19 @@ int main(void)
 
 #pragma region Scene
     Scene scene;
-    {
-        Material defaultMaterial;
-        defaultMaterial.Albedo = glm::vec3(1.0f, 0.0f, 1.0f);
-        defaultMaterial.Roughness = 0.0f;
-        defaultMaterial.Metallic = 0.0f;
-        scene.Materials.push_back(defaultMaterial);
-    }
-    {
-        Material material;
-        material.Albedo = glm::vec3(1.0f, 1.0f, 0.0f);
-        material.Roughness = 1.0f;
-        material.Metallic = 0.0f;
-        scene.Materials.push_back(material);
-    }
-    {
-        Material material;
-        material.Albedo = glm::vec3(0.0f, 1.0f, 0.0f);
-        material.Roughness = 0.2f;
-        material.Metallic = 0.0f;
-        scene.Materials.push_back(material);
-    }
-    {
-        Material material;
-        material.Albedo = glm::vec3(0.8f, 0.5f, 0.2f);
-        material.Roughness = 0.1f;
-        material.EmissionColor = material.Albedo;
-        material.EmissionPower = 10.0f;
-        scene.Materials.push_back(material);
-    }
+    /*scene.Models.push_back(Model("Models/leftmodel.obj"));
+    scene.Models.push_back(Model("Models/rightmodel.obj"));
+    scene.Models.push_back(Model("Models/light.obj"));
+    scene.Models.push_back(Model("Models/leftwall.obj"));
+    scene.Models.push_back(Model("Models/rightwall.obj"));
+    scene.Models.push_back(Model("Models/backwall.obj"));
+    scene.Models.push_back(Model("Models/ceiling.obj"));
+    scene.Models.push_back(Model("Models/floor.obj"));
+    scene.Models.push_back(Model("Models/texturedcube.obj"));*/
 
-    {
-        Mesh monkey("Models/monkey.obj", glm::vec3(0.0f, 0.0f, -1.0f));
-        monkey.SetMaterialIndex(2);
-        scene.Meshes.push_back(monkey);
-    }
-    {
-        Mesh plane("Models/plane.obj", glm::vec3(0.0f, -1.0f, 0.0f));
-        plane.SetMaterialIndex(1);
-        scene.Meshes.push_back(plane);
-    }
-    {
-        Mesh light("Models/cube1.obj", glm::vec3(2.0f, 2.0f, 3.0f));
-        light.SetMaterialIndex(3);
-        scene.Meshes.push_back(light);
-    }
+    scene.Models.push_back(Model("Models/cornellbox.obj"));
+    scene.Models.push_back(Model("Models/texcube.obj"));
+
 #pragma endregion
 
     Renderer renderer;
@@ -98,9 +69,14 @@ int main(void)
     Image image(screenWidth, screenHeight);
     Image accumulationImage(screenWidth, screenHeight);
 
+    double prevTime = 0.0f;
+
     /* Loop until the user closes the window */
     while (!glfwWindowShouldClose(window))
     {
+        double currTime = glfwGetTime();
+        double delta = currTime - prevTime;
+        prevTime = currTime;
 
         /* Poll for and process events */
         glfwPollEvents();
@@ -111,7 +87,7 @@ int main(void)
 
         glfwGetWindowSize(window, &screenWidth, &screenHeight);
         
-        if (camera.OnUpdate(window, io.Framerate / 100.0f))
+        if (camera.OnUpdate(window, delta))
             renderer.ResetFrameIndex();
         image.OnResize(screenWidth, screenHeight);
         accumulationImage.OnResize(screenWidth, screenHeight);
@@ -124,29 +100,33 @@ int main(void)
         ImGui::Begin("PATH TRACER");
         ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
         ImGui::Checkbox("Accumulate", &renderer.GetSettings().Accumulate);
-        /*ImGui::Text("MATERIALS");
-        for (uint32_t i = 1; i < scene.Materials.size(); i++)
+
+        for (uint32_t i = 0; i < scene.Models.size(); i++)
         {
-            ImGui::PushID(i);
-            Material& material = scene.Materials[i];
-            ImGui::Text("Material %i", i);
-            ImGui::ColorEdit3("Albedo", glm::value_ptr(material.Albedo));
-            ImGui::DragFloat("Roughness", &material.Roughness, 0.01f, 0.0f, 1.0f);
-            ImGui::ColorEdit3("Emission Color", glm::value_ptr(material.EmissionColor));
-            ImGui::DragFloat("Emission Power", &material.EmissionPower, 0.05f, 0.0f, FLT_MAX);
-            ImGui::Separator();
-            ImGui::PopID();
+            Model& model = scene.Models[i];
+            for (uint32_t j = 0; j < model.GetMeshes().size(); j++)
+            {
+                ImGui::PushID(i + j);
+                Mesh& mesh = model.GetMeshes()[j];
+                Material& material = mesh.GetMaterial();
+                std::string title = mesh.GetName() + " (" + material.Name + ")";
+                if (ImGui::CollapsingHeader(title.c_str())) {
+                    if (material.DiffuseTextureIndex >= 0)
+                        ImGui::Text("Diffused texture used");
+                    else
+                        ImGui::ColorEdit3("DiffuseColor", glm::value_ptr(material.DiffuseColor));
+
+                    ImGui::ColorEdit3("Emissive Color", glm::value_ptr(material.EmissionColor));
+                    ImGui::DragFloat("Emissive", &material.EmissionPower, 0.01f, 0.0f, FLT_MAX);
+                    ImGui::DragFloat("Metallic", &material.Metallic, 0.01f, 0.0f, 1.0f);
+                    ImGui::DragFloat("Shininess", &material.Shininess, 0.01f, 0.0f, 1.0f);
+                    ImGui::DragFloat("Roughness", &material.Roughness, 0.01f, 0.0f, 1.0f);
+                    ImGui::DragFloat("Specular", &material.Specular, 0.01f, 0.0f, 1.0f);
+                    ImGui::Separator();
+                }
+                ImGui::PopID();
+            }
         }
-        for (uint32_t i = 0; i < scene.Meshes.size(); i++)
-        {
-            ImGui::PushID(i);
-            const Mesh& mesh = scene.Meshes[i];
-            ImGui::Text("Mesh %i", i);
-            ImGui::SameLine();
-            ImGui::Text("Triangles: %i", mesh.GetTriangles().size());
-            ImGui::Separator();
-            ImGui::PopID();
-        }*/
 
         ImGui::End();
         ImGui::Render();

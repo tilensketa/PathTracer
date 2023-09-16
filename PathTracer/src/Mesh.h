@@ -2,6 +2,8 @@
 
 #include "Vertex.h"
 #include "AABB.h"
+#include "Material.h"
+#include "Texture.h"
 
 #include <glm/glm.hpp>
 
@@ -18,31 +20,28 @@ struct Triangle {
 
 class Mesh {
 public:
-	Mesh(std::string const& path, const glm::vec3& position);
-	Mesh(const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices, uint32_t materialIndex);
-
-	const uint32_t& GetMaterialIndex() const { return m_MaterialIndex; }
-	void SetMaterialIndex(uint32_t i);
+	Mesh(const std::string& name, const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices, const Material& material);
 
 	const std::vector<Vertex>& GetVertices() const { return m_Vertices; }
 	const std::vector<uint32_t>& GetIndices() const { return m_Indices; }
 	const std::vector<Triangle>& GetTriangles() const { return m_Triangles; }
 
+	const std::string& GetName() const { return m_Name; }
 	const AABB& GetAABB() const { return m_AABB; }
 
-	glm::vec3& Position() { return m_Position; }
-	float& Scale() { return m_Scale; }
+	const Material& GetMaterial() const { return m_Material; }
+	Material& GetMaterial() { return m_Material; }
 private:
-	std::vector<Triangle> CalculateTriangles(const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices);
+	void CalculateTriangles();
 	AABB CreateAABB();
 private:
+	std::string m_Name;
+
 	std::vector<Vertex> m_Vertices;
 	std::vector<uint32_t> m_Indices;
 	std::vector<Triangle> m_Triangles;
 
-	glm::vec3 m_Position = glm::vec3(0.0f, 0.0f, 0.0f);
-	float m_Scale = 1.0f;
-	uint32_t m_MaterialIndex = 0;
-
 	AABB m_AABB;
+
+	Material m_Material;
 };

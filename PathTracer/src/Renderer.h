@@ -27,16 +27,19 @@ private:
 		float HitDistance;
 		glm::vec3 WorldNormal;
 		glm::vec3 WorldPosition;
-		uint32_t ObjectIndex;
+		uint32_t ModelIndex;
+		uint32_t MeshIndex;
+		uint32_t TriangleIndex;
 	};
 
 	glm::vec3 PerPixel(uint32_t i);
 	HitPayload TraceRay(const Ray& ray);
-	std::vector<uint32_t> BoundingIntersection(const Ray& ray);
 	bool RayIntersectsTriangle(const Ray& ray, const Triangle& triangle, float& outT);
 	bool RayIntersectsAABB(const Ray& ray, const AABB& box, float& outTNear, float& outTFar);
-	HitPayload ClosestHit(const Ray& ray, float hitDistance, uint32_t objectIndex, uint32_t triangleIndex);
+	HitPayload ClosestHit(const Ray& ray, float hitDistance, uint32_t modelIndex, uint32_t meshIndex, uint32_t triangleIndex);
 	HitPayload Miss(const Ray& ray);
+
+	glm::vec2 CalculateBarycentricCoordinates(const HitPayload& payload);
 
 private:
 	Settings m_Settings;

@@ -1,66 +1,29 @@
 #include "Mesh.h"
 #include "OBJ_Loader.h"
 
+#include <assimp/Importer.hpp>      // C++ importer interface
+#include <assimp/scene.h>           // Output data structure
+#include <assimp/postprocess.h>     // Post processing flags
+
 #include <glm/gtc/matrix_transform.hpp>
 #include <spdlog/spdlog.h>
 
-Mesh::Mesh(const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices, uint32_t materialIndex)
-	: m_Vertices(vertices), m_Indices(indices), m_MaterialIndex(materialIndex) {
-	m_Triangles = CalculateTriangles(m_Vertices, m_Indices);
+Mesh::Mesh(const std::string& name, const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices, const Material& material)
+	: m_Name(name), m_Vertices(vertices), m_Indices(indices){
+	CalculateTriangles();
 	m_AABB = CreateAABB();
+	m_Material = material;
 }
 
-Mesh::Mesh(std::string const& path, const glm::vec3& position) {
-
-	m_Position = position;
-
-	objl::Loader Loader;
-	bool loadout = Loader.LoadFile(path);
-
-	if (loadout)
-	{
-		for (int i = 0; i < Loader.LoadedMeshes.size(); i++)
-		{
-			const objl::Mesh& curMesh = Loader.LoadedMeshes[i];
-
-			for (int j = 0; j < curMesh.Vertices.size(); j++)
-			{
-				auto vert = curMesh.Vertices[j];
-				Vertex vertex;
-				vertex.Position = glm::vec3(vert.Position.X, vert.Position.Y, vert.Position.Z) + m_Position;
-				vertex.Normal = glm::vec3(vert.Normal.X, vert.Normal.Y, vert.Normal.Z);
-				//vertex.TexCoord = glm::vec2(vert.TextureCoordinate.X, vert.TextureCoordinate.Y);
-				m_Vertices.push_back(vertex);
-			}
-			for (uint32_t j = 0; j < curMesh.Indices.size(); j++)
-			{
-				m_Indices.push_back(curMesh.Indices[j]);
-			}
-
-			m_Triangles = CalculateTriangles(m_Vertices, m_Indices);
-			m_AABB = CreateAABB();
-		}
-	}
-	else {
-		spdlog::error("Failed to load mesh");
-	}
-}
-
-void Mesh::SetMaterialIndex(uint32_t i) {
-	m_MaterialIndex = i;
-}
-
-std::vector<Triangle> Mesh::CalculateTriangles(const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices) {
-	std::vector<Triangle> result;
-	for (uint32_t i = 0; i < indices.size(); i += 3)
+void Mesh::CalculateTriangles() {
+	for (uint32_t i = 0; i < m_Indices.size(); i += 3)
 	{
 		Triangle triangle;
-		triangle.A = vertices[indices[i]];
-		triangle.B = vertices[indices[i + 1]];
-		triangle.C = vertices[indices[i + 2]];
-		result.push_back(triangle);
+		triangle.A = m_Vertices[m_Indices[i]];
+		triangle.B = m_Vertices[m_Indices[i + 1]];
+		triangle.C = m_Vertices[m_Indices[i + 2]];
+		m_Triangles.push_back(triangle);
 	}
-	return result;
 }
 
 AABB Mesh::CreateAABB() {

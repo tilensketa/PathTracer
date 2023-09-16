@@ -1,0 +1,10 @@
+^C:\USERS\TILEN\DESKTOP\ASSIMP-MASTER\CMAKELISTS.TXT
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SC:/Users/Tilen/Desktop/assimp-master -BC:/Users/Tilen/Desktop/assimp-master/build --check-stamp-file C:/Users/Tilen/Desktop/assimp-master/build/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

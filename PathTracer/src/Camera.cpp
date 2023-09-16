@@ -6,8 +6,8 @@
 
 Camera::Camera(float FOV, uint32_t width, uint32_t height, float near, float far)
 	: m_FOV(FOV), m_ViewportWidth(width), m_ViewportHeight(height), m_NearClip(near), m_FarClip(far) {
-	m_ForwardDirection = glm::vec3(0, 0, -1);
-	m_Position = glm::vec3(0, 0, 3);
+	m_ForwardDirection = glm::vec3(-1, 0, 0);
+	m_Position = glm::vec3(20, 5, 4);
 	RecalculateProjection();
 	RecalculateView();
 	RecalculateRayDirections();
