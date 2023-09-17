@@ -94,9 +94,10 @@ glm::vec3 Renderer::PerPixel(uint32_t i) {
 	{
 		HitPayload payload = TraceRay(ray);
 		if (payload.HitDistance < 0.0f) {
-			glm::vec3 skyColor = glm::vec3(0.0f, 1.0f, 1.0f);
-			//incomingLight += skyColor * rayColor;
-			break;
+			const Texture hdriImage = m_ActiveScene->EnvironmentImages[m_ActiveScene->SelectedEnvironment];
+			glm::vec3 environmentColor = MapRayToHDRI(ray.Direction, hdriImage);
+			rayColor *= environmentColor * m_ActiveScene->EnvironmetStrength;
+			return rayColor;
 		}
 		const Model& model = m_ActiveScene->Models[payload.ModelIndex];
 		const Mesh& mesh = model.GetMeshes()[payload.MeshIndex];
@@ -240,7 +241,6 @@ bool Renderer::RayIntersectsTriangle(const Ray& ray, const Triangle& triangle, f
 
 	return false;
 }
-
 bool Renderer::RayIntersectsAABB(const Ray& ray, const AABB& box, float& outTNear, float& outTFar) {
 	glm::vec3 invDir = 1.0f / ray.Direction;
 	glm::vec3 t1 = (box.Min - ray.Origin) * invDir;
@@ -290,4 +290,12 @@ glm::vec2 Renderer::CalculateBarycentricCoordinates(const HitPayload& payload) {
 	float w = 1.0f - u - v;
 	glm::vec2 interpolatedTextureCoord = v * triangle.A.TexCoord + u * triangle.B.TexCoord + w * triangle.C.TexCoord;
 	return interpolatedTextureCoord;
+}
+
+glm::vec3 Renderer::MapRayToHDRI(glm::vec3 ray_direction, const Texture& hdriImage) {
+	// Convert ray direction to spherical coordinates
+	float theta = std::acos(ray_direction.y);  // Zenith angle
+	float phi = std::atan2(ray_direction.x, ray_direction.z) + glm::radians(m_ActiveScene->EnvironmentRotation);  // Azimuth angle
+
+	return hdriImage.SampleSphericalTexture(phi, theta);
 }

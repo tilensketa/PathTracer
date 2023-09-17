@@ -1,5 +1,7 @@
 # PathTracer
 
+![PathTracer](/Renders/Skybox.PNG?raw=true "PathTracer")
+
 ![PathTracer](/Renders/CornellBox_1.PNG?raw=true "PathTracer")
 
 ![PathTracer](/Renders/12_09_2023.PNG?raw=true "PathTracer")

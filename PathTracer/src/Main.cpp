@@ -14,6 +14,8 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <spdlog/spdlog.h>
 
+#include <filesystem>
+
 int main(void)
 {
     spdlog::info("Path tracer");
@@ -49,18 +51,23 @@ int main(void)
 
 #pragma region Scene
     Scene scene;
-    /*scene.Models.push_back(Model("Models/leftmodel.obj"));
-    scene.Models.push_back(Model("Models/rightmodel.obj"));
-    scene.Models.push_back(Model("Models/light.obj"));
-    scene.Models.push_back(Model("Models/leftwall.obj"));
-    scene.Models.push_back(Model("Models/rightwall.obj"));
-    scene.Models.push_back(Model("Models/backwall.obj"));
-    scene.Models.push_back(Model("Models/ceiling.obj"));
-    scene.Models.push_back(Model("Models/floor.obj"));
-    scene.Models.push_back(Model("Models/texturedcube.obj"));*/
 
-    scene.Models.push_back(Model("Models/cornellbox.obj"));
-    scene.Models.push_back(Model("Models/texcube.obj"));
+    std::string folderPath = "Textures/Environment";
+    for (const auto& entry : std::filesystem::directory_iterator(folderPath)) {
+        // Check if the entry is a regular file and has an image file extension
+        if (entry.is_regular_file()) {
+            std::string filePath = entry.path().string();
+            std::string fileExtension = entry.path().extension().string();
+
+            if (fileExtension == ".hdr") {
+                Texture image(filePath.c_str());
+                scene.EnvironmentImages.push_back(image);
+            }
+        }
+    }
+
+    //scene.Models.push_back(Model("Models/cornellbox.obj"));
+    scene.Models.push_back(Model("Models/example.obj"));
 
 #pragma endregion
 
@@ -100,7 +107,21 @@ int main(void)
         ImGui::Begin("PATH TRACER");
         ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
         ImGui::Checkbox("Accumulate", &renderer.GetSettings().Accumulate);
-
+        if (ImGui::BeginCombo("Choose an Image", scene.EnvironmentImages[scene.SelectedEnvironment].GetName().c_str())) {
+            for (int i = 0; i < scene.EnvironmentImages.size(); ++i) {
+                bool isSelected = (i == scene.SelectedEnvironment);
+                if (ImGui::Selectable(scene.EnvironmentImages[i].GetName().c_str(), isSelected)) {
+                    scene.SelectedEnvironment = i;
+                    // Handle the selection change here if needed
+                }
+                if (isSelected) {
+                    ImGui::SetItemDefaultFocus();
+                }
+            }
+            ImGui::EndCombo();
+        }
+        ImGui::DragFloat("EnvironmentStrength", &scene.EnvironmetStrength, 0.01f, 0.0f, 5.0f);
+        ImGui::DragFloat("EnvironmentRotation", &scene.EnvironmentRotation, 0.1f, 0.0f, 360.0f);
         for (uint32_t i = 0; i < scene.Models.size(); i++)
         {
             Model& model = scene.Models[i];

@@ -50,8 +50,8 @@ private:
 
 	std::vector<glm::vec3> m_RayDirections;
 
-	float m_MoveSpeed = 2.0f;
-	float m_RotationSpeed = 2.0f;
+	float m_MoveSpeed = 5.0f;
+	float m_RotationSpeed = 3.0f;
 
 	uint32_t m_ViewportWidth;
 	uint32_t m_ViewportHeight;

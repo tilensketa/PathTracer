@@ -40,6 +40,7 @@ private:
 	HitPayload Miss(const Ray& ray);
 
 	glm::vec2 CalculateBarycentricCoordinates(const HitPayload& payload);
+	glm::vec3 MapRayToHDRI(glm::vec3 rayDirection, const Texture& hdriImage);
 
 private:
 	Settings m_Settings;
