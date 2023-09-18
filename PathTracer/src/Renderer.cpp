@@ -94,10 +94,13 @@ glm::vec3 Renderer::PerPixel(uint32_t i) {
 	{
 		HitPayload payload = TraceRay(ray);
 		if (payload.HitDistance < 0.0f) {
-			const Texture hdriImage = m_ActiveScene->EnvironmentImages[m_ActiveScene->SelectedEnvironment];
-			glm::vec3 environmentColor = MapRayToHDRI(ray.Direction, hdriImage);
-			rayColor *= environmentColor * m_ActiveScene->EnvironmetStrength;
-			return rayColor;
+			if (m_Settings.ShowEnvironment) {
+				const Texture hdriImage = m_ActiveScene->EnvironmentImages[m_ActiveScene->SelectedEnvironment];
+				glm::vec3 environmentColor = MapRayToHDRI(ray.Direction, hdriImage);
+				rayColor *= environmentColor * m_ActiveScene->EnvironmetStrength;
+				return rayColor;
+			}
+			break;
 		}
 		const Model& model = m_ActiveScene->Models[payload.ModelIndex];
 		const Mesh& mesh = model.GetMeshes()[payload.MeshIndex];

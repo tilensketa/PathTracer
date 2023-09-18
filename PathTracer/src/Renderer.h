@@ -9,6 +9,7 @@ class Renderer {
 public:
 	struct Settings {
 		bool Accumulate = true;
+		bool ShowEnvironment = true;
 	};
 public:
 	Renderer() = default;

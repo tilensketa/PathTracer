@@ -66,8 +66,8 @@ int main(void)
         }
     }
 
-    //scene.Models.push_back(Model("Models/cornellbox.obj"));
-    scene.Models.push_back(Model("Models/example.obj"));
+    scene.Models.push_back(Model("Models/cornellbox.obj"));
+    //scene.Models.push_back(Model("Models/example.obj"));
 
 #pragma endregion
 
@@ -107,6 +107,7 @@ int main(void)
         ImGui::Begin("PATH TRACER");
         ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
         ImGui::Checkbox("Accumulate", &renderer.GetSettings().Accumulate);
+        ImGui::Checkbox("Environment", &renderer.GetSettings().ShowEnvironment);
         if (ImGui::BeginCombo("Choose an Image", scene.EnvironmentImages[scene.SelectedEnvironment].GetName().c_str())) {
             for (int i = 0; i < scene.EnvironmentImages.size(); ++i) {
                 bool isSelected = (i == scene.SelectedEnvironment);
