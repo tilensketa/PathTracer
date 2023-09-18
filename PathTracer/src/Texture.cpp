@@ -41,13 +41,8 @@ const glm::vec3 Texture::SampleTexture(const glm::vec2& texCoord) const {
 const glm::vec3 Texture::SampleSphericalTexture(const float& phi, const float& theta) const {
 #define PI 3.1415926536
 	// Map spherical coordinates to image coordinates
-	float u = (phi + PI) / (2 * PI);  // Normalize azimuth angle to [0, 1]
-	float v = (theta / PI);      // Normalize zenith angle to [0, 1]
+	float u = (phi + PI) / (2 * PI);
+	float v = (theta / PI);
 
-	// Map to pixel coordinates
-	//int x = static_cast<int>(u * (m_Width - 1));
-	//int y = static_cast<int>(v * (m_Height - 1));
-
-	// Sample the HDRI image
 	return SampleTexture(glm::vec2(u, v));
 }

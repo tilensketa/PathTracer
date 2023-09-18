@@ -1,12 +1,4 @@
 #include "Mesh.h"
-#include "OBJ_Loader.h"
-
-#include <assimp/Importer.hpp>      // C++ importer interface
-#include <assimp/scene.h>           // Output data structure
-#include <assimp/postprocess.h>     // Post processing flags
-
-#include <glm/gtc/matrix_transform.hpp>
-#include <spdlog/spdlog.h>
 
 Mesh::Mesh(const std::string& name, const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices, const Material& material)
 	: m_Name(name), m_Vertices(vertices), m_Indices(indices){

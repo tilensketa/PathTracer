@@ -66,9 +66,8 @@ int main(void)
         }
     }
 
-    scene.Models.push_back(Model("Models/cornellbox.obj"));
-    //scene.Models.push_back(Model("Models/example.obj"));
-
+    //scene.Models.push_back(Model("Models/cornellbox.obj"));
+    scene.Models.push_back(Model("Models/fullcube.obj"));
 #pragma endregion
 
     Renderer renderer;
@@ -133,16 +132,23 @@ int main(void)
                 Material& material = mesh.GetMaterial();
                 std::string title = mesh.GetName() + " (" + material.Name + ")";
                 if (ImGui::CollapsingHeader(title.c_str())) {
-                    if (material.DiffuseTextureIndex >= 0)
+                    if (material.DiffuseTextureIndex >= 0) {
                         ImGui::Text("Diffused texture used");
-                    else
+                    }
+                    else {
                         ImGui::ColorEdit3("DiffuseColor", glm::value_ptr(material.DiffuseColor));
+                    }
 
                     ImGui::ColorEdit3("Emissive Color", glm::value_ptr(material.EmissionColor));
                     ImGui::DragFloat("Emissive", &material.EmissionPower, 0.01f, 0.0f, FLT_MAX);
-                    ImGui::DragFloat("Metallic", &material.Metallic, 0.01f, 0.0f, 1.0f);
-                    ImGui::DragFloat("Shininess", &material.Shininess, 0.01f, 0.0f, 1.0f);
-                    ImGui::DragFloat("Roughness", &material.Roughness, 0.01f, 0.0f, 1.0f);
+                    //ImGui::DragFloat("Metallic", &material.Metallic, 0.01f, 0.0f, 1.0f);
+                    if (material.ShininessTextureIndex >= 0) {
+                        ImGui::Text("Roughness texture used");
+                    }
+                    else {
+                        ImGui::DragFloat("Roughness", &material.Roughness, 0.01f, 0.0f, 1.0f);
+                    }
+                    //ImGui::DragFloat("Shininess", &material.Shininess, 0.01f, 0.0f, 1.0f);
                     ImGui::DragFloat("Specular", &material.Specular, 0.01f, 0.0f, 1.0f);
                     ImGui::Separator();
                 }

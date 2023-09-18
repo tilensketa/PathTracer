@@ -2,8 +2,6 @@
 
 #include "Texture.h"
 
-//#include "Utils.h"
-
 #include <glm/glm.hpp>
 
 #include <spdlog/spdlog.h>

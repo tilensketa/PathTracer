@@ -1,5 +1,4 @@
 #include "Model.h"
-#include "Material.h"
 
 #include <spdlog/spdlog.h>
 

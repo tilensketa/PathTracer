@@ -6,8 +6,8 @@
 #include <algorithm>
 #include <execution>
 
-#include <glm/gtx/component_wise.hpp>
 #include <glm/gtx/compatibility.hpp>
+#include <glm/gtx/color_space.hpp>
 
 void Renderer::OnResize(uint32_t width, uint32_t height) {
 	if (m_Width == width && m_Height == height && !m_First)
@@ -104,9 +104,10 @@ glm::vec3 Renderer::PerPixel(uint32_t i) {
 		}
 		const Model& model = m_ActiveScene->Models[payload.ModelIndex];
 		const Mesh& mesh = model.GetMeshes()[payload.MeshIndex];
+		const Triangle& triangle = mesh.GetTriangles()[payload.TriangleIndex];
 		const Material& material = mesh.GetMaterial();
 
-		glm::vec2 barycentericCoordinates = CalculateBarycentricCoordinates(payload);
+		glm::vec2 interpolatedTextureCoordinates = triangle.CalculateTextureCoordinates(payload.WorldPosition);
 
 		ray.Origin = payload.WorldPosition + payload.WorldNormal * 0.0001f;
 		glm::vec3 diffuseDir = glm::normalize(payload.WorldNormal + Random::InUnitSphere());
@@ -116,7 +117,7 @@ glm::vec3 Renderer::PerPixel(uint32_t i) {
 		glm::vec3 diffuseColor;
 		if (material.DiffuseTextureIndex >= 0) {
 			Texture diffuseTexture = material.Textures[material.DiffuseTextureIndex];
-			diffuseColor = diffuseTexture.SampleTexture(barycentericCoordinates);
+			diffuseColor = diffuseTexture.SampleTexture(interpolatedTextureCoordinates);
 		}
 		else {
 			diffuseColor = material.DiffuseColor;
@@ -127,8 +128,8 @@ glm::vec3 Renderer::PerPixel(uint32_t i) {
 		glm::vec3 specularColor;
 		if (material.SpecularTextureIndex >= 0) {
 			Texture specularTexture = material.Textures[material.SpecularTextureIndex];
-			isSpecularBounce = specularTexture.SampleTexture(barycentericCoordinates).r;
-			specularColor = specularTexture.SampleTexture(barycentericCoordinates);
+			isSpecularBounce = specularTexture.SampleTexture(interpolatedTextureCoordinates).r;
+			specularColor = specularTexture.SampleTexture(interpolatedTextureCoordinates);
 		}
 		else {
 			isSpecularBounce = material.Specular >= Random::Float(0.0f, 1.0f);
@@ -139,13 +140,24 @@ glm::vec3 Renderer::PerPixel(uint32_t i) {
 		float roughness;
 		if (material.ShininessTextureIndex >= 0) {
 			Texture shininessTexture = material.Textures[material.ShininessTextureIndex];
-			roughness = shininessTexture.SampleTexture(barycentericCoordinates).r;
+			glm::vec3 rgb = shininessTexture.SampleTexture(interpolatedTextureCoordinates);
+			glm::vec3 hsv = glm::hsvColor(rgb);
+			roughness = hsv.b;
 		}
 		else {
 			roughness = material.Roughness;
 		}
 
-		ray.Direction = glm::lerp(specularDir, diffuseDir, roughness);
+		// Normal
+		if (material.NormalTextureIndex >= 0) {
+			Texture normalTexture = material.Textures[material.NormalTextureIndex];
+			glm::vec3 rgb = normalTexture.SampleTexture(interpolatedTextureCoordinates);
+			ray.Direction = rgb;
+		}
+		else {
+			ray.Direction = glm::lerp(specularDir, diffuseDir, roughness);
+		}
+
 		incomingLight += material.GetEmission() * rayColor;
 		rayColor *= glm::lerp(diffuseColor, specularColor, isSpecularBounce);
 	}
@@ -164,95 +176,28 @@ Renderer::HitPayload Renderer::TraceRay(const Ray& ray) {
 		for (uint32_t j = 0; j < model.GetMeshes().size(); j++)
 		{
 			const Mesh& mesh = model.GetMeshes()[j];
-			float tNear, tFar;
-			if (!RayIntersectsAABB(ray, mesh.GetAABB(), tNear, tFar)) {
+			if (!mesh.GetAABB().Intersects(ray.Origin, ray.Direction))
 				continue;
-			}
 			for (uint32_t k = 0; k < mesh.GetTriangles().size(); k++)
 			{
 				const Triangle& triangle = mesh.GetTriangles()[k];
 				float t;
-				if (RayIntersectsTriangle(ray, triangle, t)) {
+				if(triangle.Intersects(ray.Origin, ray.Direction, t)) {
 					if (t < hitDistance) {
 						hitDistance = t;
-						closestModelIndex = i;
-						closestMeshIndex = j;
-						triangleIndex = k;
+							closestModelIndex = i;
+							closestMeshIndex = j;
+							triangleIndex = k;
 					}
 				}
 			}
 		}
 	}
 
-	/*for (uint32_t i = 0; i < m_ActiveScene->Meshes.size(); i++)
-	{
-		const Mesh& mesh = m_ActiveScene->Meshes[i];
-		float tNear, tFar;
-		if (!RayIntersectsAABB(ray, mesh.GetAABB(), tNear, tFar)) {
-			continue;
-		}
-		for (uint32_t j = 0; j < mesh.GetTriangles().size(); j++)
-		{
-			const Triangle& triangle = mesh.GetTriangles()[j];
-			float t;
-			if (RayIntersectsTriangle(ray, triangle, t)) {
-				if (t < hitDistance) {
-					hitDistance = t;
-					triangleIndex = j;
-					closestMeshIndex = i;
-				}
-			}
-		}
-	}*/
-
 	if (closestMeshIndex < 0)
 		return Miss(ray);
 
 	return ClosestHit(ray, hitDistance, closestModelIndex, closestMeshIndex, triangleIndex);
-}
-
-bool Renderer::RayIntersectsTriangle(const Ray& ray, const Triangle& triangle, float& outT) {
-	const float EPSILON = 0.000001f;
-	glm::vec3 edge1, edge2, h, s, q;
-	float a, f, u, v;
-
-	edge1 = triangle.B.Position - triangle.A.Position;
-	edge2 = triangle.C.Position - triangle.A.Position;
-	h = glm::cross(ray.Direction, edge2);
-	a = glm::dot(edge1, h);
-
-	if (a > -EPSILON && a < EPSILON)
-		return false;
-
-	f = 1.0f / a;
-	s = ray.Origin - triangle.A.Position;
-	u = f * glm::dot(s, h);
-
-	if (u < 0.0f || u > 1.0f)
-		return false;
-
-	q = glm::cross(s, edge1);
-	v = f * glm::dot(ray.Direction, q);
-
-	if (v < 0.0f || u + v > 1.0f)
-		return false;
-
-	outT = f * glm::dot(edge2, q);
-
-	if (outT > EPSILON)
-		return true;
-
-	return false;
-}
-bool Renderer::RayIntersectsAABB(const Ray& ray, const AABB& box, float& outTNear, float& outTFar) {
-	glm::vec3 invDir = 1.0f / ray.Direction;
-	glm::vec3 t1 = (box.Min - ray.Origin) * invDir;
-	glm::vec3 t2 = (box.Max - ray.Origin) * invDir;
-
-	outTNear = glm::compMax(glm::min(t1, t2));
-	outTFar = glm::compMin(glm::max(t1, t2));
-
-	return outTNear <= outTFar && outTFar >= 0;
 }
 
 Renderer::HitPayload Renderer::ClosestHit(const Ray& ray, float hitDistance, uint32_t modelIndex, uint32_t meshIndex, uint32_t triangleIndex) {
@@ -275,30 +220,10 @@ Renderer::HitPayload Renderer::Miss(const Ray& ray) {
 	return payload;
 }
 
-glm::vec2 Renderer::CalculateBarycentricCoordinates(const HitPayload& payload) {
-
-	const Model& model = m_ActiveScene->Models[payload.ModelIndex];
-	const Mesh& mesh = model.GetMeshes()[payload.MeshIndex];
-	const Triangle& triangle = mesh.GetTriangles()[payload.TriangleIndex];
-
-	// Calculate the barycentric coordinates
-   	glm::vec3 a = triangle.B.Position - triangle.C.Position;
-	glm::vec3 b = triangle.A.Position - triangle.C.Position;
-	glm::vec3 p = payload.WorldPosition - triangle.C.Position;
-	float A = glm::length(glm::cross(a, b) / 2.0f) / 2.0f;
-	float A1 = glm::length(glm::cross(b, p) / 2.0f) / 2.0f;
-	float A2 = glm::length(glm::cross(a, p) / 2.0f) / 2.0f;
-	float u = A1 / A;
-	float v = A2 / A;
-	float w = 1.0f - u - v;
-	glm::vec2 interpolatedTextureCoord = v * triangle.A.TexCoord + u * triangle.B.TexCoord + w * triangle.C.TexCoord;
-	return interpolatedTextureCoord;
-}
-
-glm::vec3 Renderer::MapRayToHDRI(glm::vec3 ray_direction, const Texture& hdriImage) {
+glm::vec3 Renderer::MapRayToHDRI(glm::vec3 rayDirection, const Texture& hdriImage) {
 	// Convert ray direction to spherical coordinates
-	float theta = std::acos(ray_direction.y);  // Zenith angle
-	float phi = std::atan2(ray_direction.x, ray_direction.z) + glm::radians(m_ActiveScene->EnvironmentRotation);  // Azimuth angle
+	float theta = std::acos(rayDirection.y);  // Zenith angle
+	float phi = std::atan2(rayDirection.x, rayDirection.z) + glm::radians(m_ActiveScene->EnvironmentRotation);  // Azimuth angle
 
 	return hdriImage.SampleSphericalTexture(phi, theta);
 }

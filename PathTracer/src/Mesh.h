@@ -1,22 +1,13 @@
 #pragma once
 
-#include "Vertex.h"
+#include "Triangle.h"
 #include "AABB.h"
 #include "Material.h"
-#include "Texture.h"
 
 #include <glm/glm.hpp>
 
 #include <vector>
-#include <iostream>
 #include <string>
-
-struct Triangle {
-	Vertex A;
-	Vertex B;
-	Vertex C;
-};
-
 
 class Mesh {
 public:
