@@ -6,8 +6,9 @@ struct Triangle {
 	Vertex A;
 	Vertex B;
 	Vertex C;
+	glm::vec3 Center;
 
-	bool Intersects(const glm::vec3& origin, const glm::vec3& direction, float& outT) const {
+	bool IntersectsWithRay(const glm::vec3& origin, const glm::vec3& direction, float& outT) const {
 		const float EPSILON = 0.000001f;
 		glm::vec3 edge1, edge2, h, s, q;
 		float a, f, u, v;

@@ -67,7 +67,7 @@ int main(void)
     }
 
     //scene.Models.push_back(Model("Models/cornellbox.obj"));
-    scene.Models.push_back(Model("Models/fullcube.obj"));
+    scene.Models.push_back(Model("Models/monkeys.obj"));
 #pragma endregion
 
     Renderer renderer;

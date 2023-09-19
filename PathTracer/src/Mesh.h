@@ -1,8 +1,10 @@
 #pragma once
 
-#include "Triangle.h"
-#include "AABB.h"
+//#include "Triangle.h"
+//#include "AABB.h"
 #include "Material.h"
+
+#include "BVHNode.h"
 
 #include <glm/glm.hpp>
 
@@ -19,6 +21,7 @@ public:
 
 	const std::string& GetName() const { return m_Name; }
 	const AABB& GetAABB() const { return m_AABB; }
+	BVHNode* GetBVH() const { return m_BVHNode; }
 
 	const Material& GetMaterial() const { return m_Material; }
 	Material& GetMaterial() { return m_Material; }
@@ -33,6 +36,7 @@ private:
 	std::vector<Triangle> m_Triangles;
 
 	AABB m_AABB;
+	BVHNode* m_BVHNode = nullptr;
 
 	Material m_Material;
 };

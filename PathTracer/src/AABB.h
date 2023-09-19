@@ -11,7 +11,7 @@ struct AABB {
 	AABB(const glm::vec3& max, const glm::vec3& min)
 		: Max(max), Min(min) {}
 
-	bool Intersects(glm::vec3 origin, glm::vec3 direction) const {
+	bool IntersectsWithRay(glm::vec3 origin, glm::vec3 direction) const {
 		glm::vec3 invDir = 1.0f / direction;
 		glm::vec3 t1 = (Min - origin) * invDir;
 		glm::vec3 t2 = (Max - origin) * invDir;

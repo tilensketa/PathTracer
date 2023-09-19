@@ -102,6 +102,7 @@ glm::vec3 Renderer::PerPixel(uint32_t i) {
 			}
 			break;
 		}
+
 		const Model& model = m_ActiveScene->Models[payload.ModelIndex];
 		const Mesh& mesh = model.GetMeshes()[payload.MeshIndex];
 		const Triangle& triangle = mesh.GetTriangles()[payload.TriangleIndex];
@@ -165,6 +166,45 @@ glm::vec3 Renderer::PerPixel(uint32_t i) {
 }
 
 Renderer::HitPayload Renderer::TraceRay(const Ray& ray) {
+#define BVH 1 // BoundingVolumeHierarchy
+#if BVH
+	int closestModelIndex = -1;
+	int closestMeshIndex = -1;
+	Triangle tri;
+	float hitDistance = std::numeric_limits<float>::max();
+
+	//std::vector<Triangle> triangles;
+	for (uint32_t i = 0; i < m_ActiveScene->Models.size(); i++)
+	{
+		const Model& model = m_ActiveScene->Models[i];
+		if (!model.IntersectsWithRay(ray.Origin, ray.Direction)) {
+			continue;
+		}
+		for (uint32_t j = 0; j < model.GetMeshes().size(); j++)
+		{
+			const Mesh& mesh = model.GetMeshes()[j];
+			std::vector<Triangle> triangles = IntersectWithBVH(mesh.GetBVH(), ray.Origin, ray.Direction);
+			for (uint32_t k = 0; k < triangles.size(); k++)
+			{
+				const Triangle& triangle = triangles[k];
+				float t;
+				if (triangle.IntersectsWithRay(ray.Origin, ray.Direction, t)) {
+					if (hitDistance > t) {
+						hitDistance = t;
+						closestModelIndex = i;
+						closestMeshIndex = j;
+						tri = triangle;
+					}
+				}
+			}
+		}
+	}
+	if (closestMeshIndex < 0)
+		return Miss(ray);
+
+	return ClosestHit(ray, hitDistance, closestModelIndex, closestMeshIndex, tri);
+
+#else
 	int closestModelIndex = -1;
 	int closestMeshIndex = -1;
 	int triangleIndex = -1;
@@ -176,28 +216,28 @@ Renderer::HitPayload Renderer::TraceRay(const Ray& ray) {
 		for (uint32_t j = 0; j < model.GetMeshes().size(); j++)
 		{
 			const Mesh& mesh = model.GetMeshes()[j];
-			if (!mesh.GetAABB().Intersects(ray.Origin, ray.Direction))
+			if (!mesh.GetAABB().IntersectsWithRay(ray.Origin, ray.Direction))
 				continue;
 			for (uint32_t k = 0; k < mesh.GetTriangles().size(); k++)
 			{
 				const Triangle& triangle = mesh.GetTriangles()[k];
 				float t;
-				if(triangle.Intersects(ray.Origin, ray.Direction, t)) {
+				if (triangle.IntersectsWithRay(ray.Origin, ray.Direction, t)) {
 					if (t < hitDistance) {
 						hitDistance = t;
-							closestModelIndex = i;
-							closestMeshIndex = j;
-							triangleIndex = k;
+						closestModelIndex = i;
+						closestMeshIndex = j;
+						triangleIndex = k;
 					}
 				}
 			}
 		}
 	}
-
 	if (closestMeshIndex < 0)
 		return Miss(ray);
 
 	return ClosestHit(ray, hitDistance, closestModelIndex, closestMeshIndex, triangleIndex);
+#endif
 }
 
 Renderer::HitPayload Renderer::ClosestHit(const Ray& ray, float hitDistance, uint32_t modelIndex, uint32_t meshIndex, uint32_t triangleIndex) {
@@ -226,4 +266,39 @@ glm::vec3 Renderer::MapRayToHDRI(glm::vec3 rayDirection, const Texture& hdriImag
 	float phi = std::atan2(rayDirection.x, rayDirection.z) + glm::radians(m_ActiveScene->EnvironmentRotation);  // Azimuth angle
 
 	return hdriImage.SampleSphericalTexture(phi, theta);
+}
+
+std::vector<Triangle> Renderer::IntersectWithBVH(BVHNode* node, const glm::vec3& origin, const glm::vec3& direction) const {
+	std::vector<Triangle> intersectedTriangles;
+
+	if (!node->BoundingBox.IntersectsWithRay(origin, direction)) {
+		// No intersection with this node's bounding volume, exit early.
+		return {};
+	}
+
+	if (node->IsLeaf) {
+		return node->Triangles;
+	}
+	else {
+		// Internal node, recursively traverse the children.
+		std::vector<Triangle> leftTriangles = IntersectWithBVH(node->Left, origin, direction);
+		std::vector<Triangle> rightTriangles = IntersectWithBVH(node->Right, origin, direction);
+		
+		// Combine the triangles from both children.
+		intersectedTriangles.insert(intersectedTriangles.end(), leftTriangles.begin(), leftTriangles.end());
+		intersectedTriangles.insert(intersectedTriangles.end(), rightTriangles.begin(), rightTriangles.end());
+	}
+	return intersectedTriangles;
+}
+
+Renderer::HitPayload Renderer::ClosestHit(const Ray& ray, float hitDistance, uint32_t modelIndex, uint32_t meshIndex, Triangle triangle) {
+	HitPayload payload;
+	payload.HitDistance = hitDistance;
+	payload.ModelIndex = modelIndex;
+	payload.MeshIndex = meshIndex;
+
+	payload.WorldPosition = ray.Direction * hitDistance + ray.Origin;
+	payload.WorldNormal = triangle.A.Normal;
+
+	return payload;
 }

@@ -5,6 +5,7 @@ Mesh::Mesh(const std::string& name, const std::vector<Vertex>& vertices, const s
 	CalculateTriangles();
 	m_AABB = CreateAABB();
 	m_Material = material;
+	m_BVHNode = BuildBVH(m_Triangles, 5);
 }
 
 void Mesh::CalculateTriangles() {
@@ -14,6 +15,13 @@ void Mesh::CalculateTriangles() {
 		triangle.A = m_Vertices[m_Indices[i]];
 		triangle.B = m_Vertices[m_Indices[i + 1]];
 		triangle.C = m_Vertices[m_Indices[i + 2]];
+
+		float centerX = (triangle.A.Position.x + triangle.B.Position.x + triangle.C.Position.x) / 3;
+		float centerY = (triangle.A.Position.y + triangle.B.Position.y + triangle.C.Position.y) / 3;
+		float centerZ = (triangle.A.Position.z + triangle.B.Position.z + triangle.C.Position.z) / 3;
+		glm::vec3 center = glm::vec3(centerX, centerY, centerZ);
+		triangle.Center = center;
+
 		m_Triangles.push_back(triangle);
 	}
 }

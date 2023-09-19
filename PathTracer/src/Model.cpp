@@ -17,6 +17,11 @@ Model::Model(const std::string& path) {
 		// Start processing the model data beginning with the root node
 		ProcessNode(scene->mRootNode, scene);
 	}
+	m_AABB = CreateAABB();
+}
+
+bool Model::IntersectsWithRay(const glm::vec3& origin, const glm::vec3& direction) const {
+	return GetAABB().IntersectsWithRay(origin, direction);
 }
 
 void Model::ProcessNode(const aiNode* node, const aiScene* scene)
@@ -191,4 +196,24 @@ Material Model::ProcessNodeMaterials(aiMaterial* material) {
 		newMaterial.EmissionPower = emissive;
 	}*/
 	return newMaterial;
+}
+
+AABB Model::CreateAABB() {
+	float max = std::numeric_limits<float>::max();
+	float min = std::numeric_limits<float>::min();
+	glm::vec3 minVert = glm::vec3(max, max, max);
+	glm::vec3 maxVert = glm::vec3(-max, -max, -max);
+	for (uint32_t i = 0; i < m_Meshes.size(); i++)
+	{
+		const Mesh& mesh = m_Meshes[i];
+		const AABB& meshAABB = mesh.GetAABB();
+		minVert.x = std::min(minVert.x, meshAABB.Min.x);
+		minVert.y = std::min(minVert.y, meshAABB.Min.y);
+		minVert.z = std::min(minVert.z, meshAABB.Min.z);
+
+		maxVert.x = std::max(maxVert.x, meshAABB.Max.x);
+		maxVert.y = std::max(maxVert.y, meshAABB.Max.y);
+		maxVert.z = std::max(maxVert.z, meshAABB.Max.z);
+	}
+	return AABB(maxVert, minVert);
 }

@@ -260,6 +260,7 @@
     <ClInclude Include="Dependencies\imgui\imgui\imstb_textedit.h" />
     <ClInclude Include="Dependencies\imgui\imgui\imstb_truetype.h" />
     <ClInclude Include="src\AABB.h" />
+    <ClInclude Include="src\BVHNode.h" />
     <ClInclude Include="src\Camera.h" />
     <ClInclude Include="src\Image.h" />
     <ClInclude Include="src\Material.h" />

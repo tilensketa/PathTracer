@@ -36,10 +36,12 @@ private:
 	glm::vec3 PerPixel(uint32_t i);
 	HitPayload TraceRay(const Ray& ray);
 	HitPayload ClosestHit(const Ray& ray, float hitDistance, uint32_t modelIndex, uint32_t meshIndex, uint32_t triangleIndex);
+	HitPayload ClosestHit(const Ray& ray, float hitDistance, uint32_t modelIndex, uint32_t meshIndex, Triangle triangle);
 	HitPayload Miss(const Ray& ray);
 
 	glm::vec3 MapRayToHDRI(glm::vec3 rayDirection, const Texture& hdriImage);
 
+	std::vector<Triangle> IntersectWithBVH(BVHNode* node, const glm::vec3& origin, const glm::vec3& direction) const;
 private:
 	Settings m_Settings;
 
